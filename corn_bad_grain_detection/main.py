@@ -86,7 +86,7 @@ def apply_custom_styles():
         .dark-mode .image-container {box-shadow: 0 4px 8px rgba(0,0,0,0.2);}
         .dark-mode .stats-card .stat-item {background-color: #3d3d3d; color: white;}
     </style>
-    """, unsafe_allow_html=True)
+    """)
 
 apply_custom_styles()
 
@@ -95,13 +95,12 @@ st.markdown(
     "<div style='text-align: center; margin-bottom: 2rem;'>"
     "<h1 class='main-header'>🌽 玉米坏粒识别平台</h1>"
     "<p>基于深度学习的玉米质量智能评估系统</p>"
-    "</div>", 
-    unsafe_allow_html=True
+    "</div>"
 )
 
 # 侧边栏保留原有功能，优化排版
 with st.sidebar:
-    st.header("系统设置", divider='rainbow')
+    st.header("系统设置")
     
     # 主题切换
     theme = st.radio("选择主题", ["亮色模式", "深色模式"], horizontal=True)
@@ -109,24 +108,94 @@ with st.sidebar:
         st.markdown("<body class='dark-mode'>", unsafe_allow_html=True)
     
     # 模型设置
-    st.header("模型管理", divider='gray')
-    # ...（原有模型选择逻辑保持不变）
+    st.header("模型管理")
     
-    # 关于信息
-    st.header("关于", divider='gray')
-    st.info("""
-    本平台支持：<br>
-    ✅ 多格式图像上传<br>
-    ✅ 自定义模型加载<br>
-    ✅ 实时摄像头拍摄<br>
-    """, unsafe_allow_html=True)
+    # 默认模型路径
+    DEFAULT_MODEL_PATH = 'model/best.pt'
+    default_model_exists = os.path.exists(DEFAULT_MODEL_PATH)
+    
+    if default_model_exists:
+        st.info(f"检测到默认模型: {DEFAULT_MODEL_PATH}")
+    else:
+        st.warning(f"未找到默认模型: {DEFAULT_MODEL_PATH}")
+    
+    # 模型选择方式
+    model_choice = st.radio(
+        "选择模型来源",
+        ["默认模型", "上传自定义模型"]
+    )
+    
+    # 根据选择设置模型文件和类型
+    model_file = None
+    model_type = None
+    
+    if model_choice == "默认模型" and default_model_exists:
+        try:
+            model_file = open(DEFAULT_MODEL_PATH, 'rb')
+            file_ext = os.path.splitext(DEFAULT_MODEL_PATH)[1].lower()
+            if file_ext == '.onnx':
+                model_type = "ONNX"
+            else:
+                model_type = "PyTorch"
+            st.success("已选择默认模型")
+        except Exception as e:
+            st.error(f"无法加载默认模型: {e}")
+            model_file = None
+    elif model_choice == "上传自定义模型":
+        # 上传模型权重文件
+        model_file = st.file_uploader("上传模型文件", type=["pt", "pth", "onnx"])
+        
+        if model_file:
+            file_ext = os.path.splitext(model_file.name)[1].lower()
+            if file_ext == '.onnx':
+                default_model_type = "ONNX"
+            else:
+                default_model_type = "PyTorch"
+            
+            model_type = st.selectbox(
+                "模型类型",
+                ["PyTorch", "TorchScript", "ONNX"],
+                index=["PyTorch", "TorchScript", "ONNX"].index(default_model_type)
+            )
+            st.success(f"已上传模型: {model_file.name}")
+        else:
+            st.info("请上传模型文件")
+    else:
+        st.info("请选择模型来源")
+    
+    # 只有在选择了模型后才显示其他设置
+    if model_file and model_type:
+        confidence_threshold = st.slider(
+            "置信度阈值",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.5,
+            step=0.05
+        )
+        
+        # 高级设置
+        with st.expander("高级设置"):
+            draw_bbox = st.checkbox("显示边界框", value=True)
+            draw_label = st.checkbox("显示标签", value=True)
+            draw_confidence = st.checkbox("显示置信度", value=True)
+            line_thickness = st.slider("边界框线条粗细", min_value=1, max_value=10, value=2)
+            detection_color = st.color_picker("坏粒标记颜色", "#FF0000")
+    
+    # 关于信息（使用 markdown 替代 info）
+    st.header("关于")
+    st.markdown("""
+    本平台支持：  
+    ✅ 多格式图像上传  
+    ✅ 自定义模型加载  
+    ✅ 实时摄像头拍摄  
+    """)
 
 # 主内容区域采用容器布局
 with st.container():
     col1, col2 = st.columns([1, 1], gap='large')
     
     with col1:
-        st.subheader("图像输入", divider='blue')
+        st.subheader("图像输入")
         # 上传组件
         uploaded_file = st.file_uploader(
             "选择图片", type=["jpg", "jpeg", "png"],
@@ -149,7 +218,7 @@ with st.container():
                 st.markdown("</div>", unsafe_allow_html=True)
 
     with col2:
-        st.subheader("分析结果", divider='green')
+        st.subheader("分析结果")
         result_placeholder = st.empty()
         
         # 模型执行逻辑
@@ -187,7 +256,7 @@ with st.container():
                                 <div style="color: #7f8c8d;">处理耗时</div>
                             </div>
                         </div>
-                        """ % (bad_count, processing_time), unsafe_allow_html=True)
+                        """ % (bad_count, processing_time))
                         
                         # 下载按钮
                         st.markdown("""
@@ -197,7 +266,7 @@ with st.container():
                             margin-top: 1.5rem;
                         }
                         </style>
-                        """, unsafe_allow_html=True)
+                        """)
                         st.markdown('<div class="download-btn">', unsafe_allow_html=True)
                         result_pil = Image.fromarray(cv2.cvtColor(result_img, cv2.COLOR_BGR2RGB))
                         with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
@@ -216,6 +285,5 @@ with st.container():
 st.markdown(
     "<div style='text-align: center; margin: 2rem 0; color: #7f8c8d;'>"
     "提示：检测结果仅供参考，实际应用请结合专业质检流程"
-    "</div>", 
-    unsafe_allow_html=True
+    "</div>"
 )
