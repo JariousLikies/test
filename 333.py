@@ -14,14 +14,13 @@ import onnxruntime as ort
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# 设置页面配置
+# 设置页面配置 - 确保这是第一个Streamlit命令
 st.set_page_config(
     page_title="玉米坏粒识别平台",
     page_icon="🌽",
     layout="wide"
 )
 
-# 自定义CSS样式
 # 自定义CSS样式 - 增强版本
 custom_css = """
 <style>
@@ -237,13 +236,6 @@ def get_logo_svg():
         <path d="M100,30 Q120,10 140,30 Q160,50 140,70 Q120,90 100,70 Q80,90 60,70 Q40,50 60,30 Q80,10 100,30" fill="#4CAF50" />
     </svg>
     """
-
-# 设置页面配置
-st.set_page_config(
-    page_title="玉米坏粒识别平台",
-    page_icon="🌽",
-    layout="wide"
-)
 
 # 显示自定义CSS
 st.markdown(custom_css, unsafe_allow_html=True)
