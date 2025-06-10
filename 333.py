@@ -5,15 +5,15 @@ import torch
 import cv2
 import numpy as np
 from PIL import Image
+import onnxruntime as ort
 import time
 import logging
-import onnxruntime as ort
 from ultralytics import YOLO
 
 # 配置日志
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 ch = logging.StreamHandler()
 ch.setFormatter(formatter)
 logger.addHandler(ch)
@@ -31,32 +31,44 @@ except ImportError:
     ULTRALYTICS_AVAILABLE = False
     st.warning("未安装ultralytics库，可能无法加载某些类型的模型。")
 
+# 侧边栏选项
+with st.sidebar:
+    st.header("模型选择")
+    model_choice = st.radio("选择模型", ["自定义模型", "默认模型"])
 
-# 自动查找model目录下的权重文件
-def find_model_file():
-    model_dir = "model"
-    if os.path.exists(model_dir):
-        for root, dirs, files in os.walk(model_dir):
-            for file in files:
-                if file.endswith(('.pt', '.onnx')):
-                    return os.path.join(root, file)
-    return None
-
+    if model_choice == "自定义模型":
+        model_file = st.file_uploader("上传模型文件", type=["pt", "onnx"])
+        model_type = st.selectbox("模型类型", ["ONNX", "PyTorch"])
+    else:
+        # 假设model文件夹下有一个默认模型文件
+        default_model_path = "model/default_model.onnx"
+        if os.path.exists(default_model_path):
+            model_file = open(default_model_path, 'rb')
+            model_type = "ONNX"
+        else:
+            st.warning("默认模型文件不存在，请检查路径。")
+            model_file = None
+            model_type = None
 
 # 加载模型
 @st.cache_resource
 def load_model(model_path, model_type):
     if not model_path:
-        st.warning("未找到模型文件，使用示例参数。请确保model目录下有有效的模型文件。")
+        st.warning("未上传模型，使用示例参数。请上传您的模型文件以获得准确结果。")
         return None
 
     try:
-        st.info(f"正在加载{model_type}模型: {os.path.basename(model_path)}")
+        st.info(f"正在加载{model_type}模型: {model_path.name}")
+
+        # 临时保存上传的模型文件
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(model_path.name)[1]) as tmp:
+            tmp.write(model_path.read())
+            tmp_path = tmp.name
 
         if model_type == "ONNX":
             # 加载ONNX模型
             model = ort.InferenceSession(
-                model_path,
+                tmp_path,
                 providers=['CPUExecutionProvider']
             )
             st.success("ONNX模型加载成功！")
@@ -64,7 +76,7 @@ def load_model(model_path, model_type):
             # 尝试加载为Ultralytics YOLO模型
             if ULTRALYTICS_AVAILABLE:
                 try:
-                    model = YOLO(model_path)
+                    model = YOLO(tmp_path)
                     st.success("Ultralytics YOLO模型加载成功！")
                     # 特殊处理：调整为评估模式
                     if hasattr(model, 'model') and hasattr(model.model, 'eval'):
@@ -81,7 +93,7 @@ def load_model(model_path, model_type):
                             torch.serialization.add_safe_globals([DetectionModel])
 
                             # 使用weights_only=False加载完整模型
-                            model = torch.load(model_path, map_location=torch.device('cpu'), weights_only=False)
+                            model = torch.load(tmp_path, map_location=torch.device('cpu'), weights_only=False)
                             st.success("PyTorch模型加载成功（使用weights_only=False）！")
 
                             # 检查是否需要转换为eval模式
@@ -94,7 +106,7 @@ def load_model(model_path, model_type):
                         # 尝试常规PyTorch加载
                         try:
                             # 尝试常规加载
-                            model = torch.load(model_path, map_location=torch.device('cpu'))
+                            model = torch.load(tmp_path, map_location=torch.device('cpu'))
                             st.success("PyTorch模型加载成功！")
 
                             # 检查是否需要转换为eval模式
@@ -103,13 +115,13 @@ def load_model(model_path, model_type):
                         except Exception as e2:
                             # 尝试作为TorchScript加载
                             st.info("常规加载失败，尝试作为TorchScript加载...")
-                            model = torch.jit.load(model_path, map_location=torch.device('cpu'))
+                            model = torch.jit.load(tmp_path, map_location=torch.device('cpu'))
                             st.success("TorchScript模型加载成功！")
             else:
                 # 没有安装ultralytics库，直接尝试常规加载
                 try:
                     # 尝试常规加载
-                    model = torch.load(model_path, map_location=torch.device('cpu'))
+                    model = torch.load(tmp_path, map_location=torch.device('cpu'))
                     st.success("PyTorch模型加载成功！")
 
                     # 检查是否需要转换为eval模式
@@ -118,8 +130,11 @@ def load_model(model_path, model_type):
                 except Exception as e:
                     # 尝试作为TorchScript加载
                     st.info("常规加载失败，尝试作为TorchScript加载...")
-                    model = torch.jit.load(model_path, map_location=torch.device('cpu'))
+                    model = torch.jit.load(tmp_path, map_location=torch.device('cpu'))
                     st.success("TorchScript模型加载成功！")
+
+        # 清理临时文件
+        os.unlink(tmp_path)
 
         # 模型测试推理（仅在上传模型后执行）
         if test_model_inference(model, model_type):
@@ -464,7 +479,7 @@ def hex_to_rgb(hex_color):
 # 主界面
 col1, col2 = st.columns([1, 1])
 
-# 假设的参数
+# 假设的全局变量
 draw_bbox = True
 draw_label = True
 draw_confidence = True
@@ -499,10 +514,6 @@ with col1:
             img_array = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
 
         st.image(image, use_column_width=True)
-
-        # 查找模型文件
-        model_file = find_model_file()
-        model_type = "ONNX" if model_file.endswith('.onnx') else "PyTorch"
 
         # 加载模型
         model = load_model(model_file, model_type)
