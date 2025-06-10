@@ -121,6 +121,7 @@ except ImportError:
     st.warning("未安装ultralytics库，可能无法加载某些类型的模型。")
 
 
+
 # 加载模型
 @st.cache_resource
 def load_model(model_path, model_type):
@@ -133,7 +134,7 @@ def load_model(model_path, model_type):
 
         # 临时保存上传的模型文件
         with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(model_path.name)[1]) as tmp:
-            tmp.write(model_path.getvalue())
+            tmp.write(model_path.read())  # 修改此处
             tmp_path = tmp.name
 
         if model_type == "ONNX":
