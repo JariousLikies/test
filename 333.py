@@ -29,34 +29,53 @@ st.markdown("本平台基于深度学习技术，能够自动识别玉米中的�
 with st.sidebar:
     st.header("模型设置")
 
-    # 上传模型权重文件
-    model_file = st.file_uploader("上传模型文件", type=["pt", "pth", "onnx"])
+    # 添加自定义和默认按钮
+    custom_mode = st.button("自定义")
+    default_mode = st.button("默认")
 
-    # 选择模型类型
-    if model_file:
-        file_ext = os.path.splitext(model_file.name)[1].lower()
-        if file_ext == '.onnx':
-            default_model_type = "ONNX"
+    if custom_mode:
+        # 上传模型权重文件
+        model_file = st.file_uploader("上传模型文件", type=["pt", "pth", "onnx"])
+
+        # 选择模型类型
+        if model_file:
+            file_ext = os.path.splitext(model_file.name)[1].lower()
+            if file_ext == '.onnx':
+                default_model_type = "ONNX"
+            else:
+                default_model_type = "PyTorch"
+
+            model_type = st.selectbox(
+                "模型类型",
+                ["PyTorch", "TorchScript", "ONNX"],
+                index=["PyTorch", "TorchScript", "ONNX"].index(default_model_type)
+            )
         else:
-            default_model_type = "PyTorch"
+            model_type = st.selectbox(
+                "模型类型",
+                ["PyTorch", "TorchScript", "ONNX"],
+                index=0
+            )
+    elif default_mode:
+        # 默认使用model文件夹中的pt文件
+        default_model_path = os.path.join("model", [f for f in os.listdir("model") if f.endswith('.pt')][0])
+        class DummyFile:
+            def __init__(self, path):
+                self.name = path
+                with open(path, 'rb') as f:
+                    self.value = f.read()
 
-        model_type = st.selectbox(
-            "模型类型",
-            ["PyTorch", "TorchScript", "ONNX"],
-            index=["PyTorch", "TorchScript", "ONNX"].index(default_model_type)
-        )
+            def getvalue(self):
+                return self.value
+
+        model_file = DummyFile(default_model_path)
+        model_type = "PyTorch"
     else:
-        # 检查默认模型文件
-        default_model_path = os.path.join('model', 'your_default_model.pt')
-        if os.path.exists(default_model_path):
-            default_model_type = "PyTorch"
-        else:
-            default_model_type = "PyTorch"
-
+        model_file = None
         model_type = st.selectbox(
             "模型类型",
             ["PyTorch", "TorchScript", "ONNX"],
-            index=["PyTorch", "TorchScript", "ONNX"].index(default_model_type)
+            index=0
         )
 
     confidence_threshold = st.slider(
@@ -94,25 +113,16 @@ except ImportError:
 @st.cache_resource
 def load_model(model_path, model_type):
     if not model_path:
-        # 检查默认模型文件
-        default_model_path = os.path.join('model', 'your_default_model.pt')
-        if os.path.exists(default_model_path):
-            st.info(f"未上传模型，使用默认的PyTorch模型: {default_model_path}")
-            model_path = default_model_path
-        else:
-            st.warning("未上传模型，也未找到默认模型，使用示例参数。请上传您的模型文件以获得准确结果。")
-            return None
+        st.warning("未上传模型，使用示例参数。请上传您的模型文件以获得准确结果。")
+        return None
 
     try:
-        if isinstance(model_path, str):  # 如果是默认模型路径
-            tmp_path = model_path
-        else:
-            # 临时保存上传的模型文件
-            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(model_path.name)[1]) as tmp:
-                tmp.write(model_path.getvalue())
-                tmp_path = tmp.name
+        st.info(f"正在加载{model_type}模型: {model_path.name}")
 
-        st.info(f"正在加载{model_type}模型: {tmp_path}")
+        # 临时保存上传的模型文件
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(model_path.name)[1]) as tmp:
+            tmp.write(model_path.getvalue())
+            tmp_path = tmp.name
 
         if model_type == "ONNX":
             # 加载ONNX模型
@@ -183,8 +193,7 @@ def load_model(model_path, model_type):
                     st.success("TorchScript模型加载成功！")
 
         # 清理临时文件
-        if not isinstance(model_path, str):
-            os.unlink(tmp_path)
+        os.unlink(tmp_path)
 
         # 模型测试推理（仅在上传模型后执行）
         if test_model_inference(model, model_type):
@@ -546,54 +555,7 @@ with col1:
     if uploaded_file is not None:
         # 显示原始图像
         st.subheader("原始图像")
-        image = Image.open(uploaded_file)
-        img_array = np.array(image)
 
-        # 如果图像是RGBA格式，转换为RGB
-        if img_array.shape[2] == 4:
-            img_array = cv2.cvtColor(img_array, cv2.COLOR_RGBA2RGB)
-        else:
-            img_array = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
 
-        st.image(image, use_column_width=True)
-
-        # 加载模型
-        model = load_model(model_file, model_type)
-
-        if st.button("开始分析"):
-            if model is None and not model_file:
-                st.warning("未加载模型，将使用示例参数进行演示。")
-
-            with st.spinner("正在分析图像..."):
-                start_time = time.time()
-                result_img, bad_count = process_image(
-                    img_array, model, model_type, confidence_threshold, detection_color
-                )
-                end_time = time.time()
-
-                # 显示处理时间
-                processing_time = end_time - start_time
-                st.write(f"分析完成！耗时: {processing_time:.2f}秒")
-
-                # 显示结果图像
-                with col2:
-                    st.subheader("分析结果")
-                    st.image(
-                        cv2.cvtColor(result_img, cv2.COLOR_BGR2RGB),
-                        use_column_width=True
-                    )
-
-                    # 显示统计信息
-                    st.subheader("统计信息")
-                    st.metric("坏粒数量", bad_count)
-
-                    # 下载结果
-                    result_pil = Image.fromarray(cv2.cvtColor(result_img, cv2.COLOR_BGR2RGB))
-                    with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp:
-                        result_pil.save(tmp.name)
-                        st.download_button(
-                            label="下载分析结果",
-                            data=open(tmp.name, 'rb').read(),
-                            file_name="corn_analysis_result.png",
-                            mime="image/png"
-                        )
+# 加载模型
+model = load_model(model_file, model_type)
