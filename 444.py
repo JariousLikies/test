@@ -14,59 +14,6 @@ import onnxruntime as ort
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# 自定义CSS样式
-st.markdown(
-    """
-    <style>
-        /* 整体背景颜色 */
-        body {
-            background-color: #f4f4f4;
-        }
-        /* 标题样式 */
-        .stApp h1 {
-            color: #333;
-            text-align: center;
-            font-size: 36px;
-            margin-bottom: 20px;
-        }
-        /* 侧边栏样式 */
-        .sidebar .sidebar-content {
-            background-color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-        }
-        /* 按钮样式 */
-        .stButton>button {
-            background-color: #007BFF;
-            color: white;
-            border-radius: 5px;
-            border: none;
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-        .stButton>button:hover {
-            background-color: #0056b3;
-        }
-        /* 图像容器样式 */
-        .stImage img {
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        /* 统计信息样式 */
-        .stMetric {
-            background-color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            text-align: center;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
 # 设置页面配置
 st.set_page_config(
     page_title="玉米坏粒识别平台",
@@ -74,13 +21,47 @@ st.set_page_config(
     layout="wide"
 )
 
+# 添加自定义CSS样式
+st.markdown(
+    """
+    <style>
+    /* 整体背景颜色 */
+    body {
+        background-color: #f4f4f4;
+    }
+    /* 标题样式 */
+    h1 {
+        color: #2c3e50;
+        text-align: center;
+    }
+    /* 副标题样式 */
+    h2 {
+        color: #34495e;
+    }
+    /* 侧边栏样式 */
+    .css-1cypcdb {
+        background-color: #ecf0f1;
+    }
+    /* 卡片样式 */
+    .card {
+        background-color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 # 标题和介绍
 st.title("🌽 玉米坏粒识别平台")
-st.markdown("本平台基于深度学习技术，能够自动识别玉米中的坏粒，帮助您快速评估玉米质量。")
+st.markdown("<p style='text-align: center;'>本平台基于深度学习技术，能够自动识别玉米中的坏粒，帮助您快速评估玉米质量。</p>", unsafe_allow_html=True)
 
 # 侧边栏 - 模型设置
 with st.sidebar:
-    st.header("模型设置")
+    st.markdown("<h2 class='card'>模型设置</h2>", unsafe_allow_html=True)
 
     # 默认模型路径
     DEFAULT_MODEL_PATH = 'model/best.pt'
@@ -139,6 +120,7 @@ with st.sidebar:
 
     # 只有在选择了模型后才显示其他设置
     if model_file and model_type:
+        st.markdown("<h3 class='card'>模型参数设置</h3>", unsafe_allow_html=True)
         confidence_threshold = st.slider(
             "置信度阈值",
             min_value=0.0,
@@ -155,7 +137,7 @@ with st.sidebar:
             line_thickness = st.slider("边界框线条粗细", min_value=1, max_value=10, value=2)
             detection_color = st.color_picker("坏粒标记颜色", "#FF0000")
 
-    st.header("关于")
+    st.markdown("<h2 class='card'>关于</h2>", unsafe_allow_html=True)
     st.info("""
     本平台使用深度学习模型识别玉米坏粒，支持多种格式的图像输入。
     上传图像后，系统将自动检测并标记出坏粒区域。
@@ -596,7 +578,7 @@ def hex_to_rgb(hex_color):
 col1, col2 = st.columns([1, 1])
 
 with col1:
-    st.subheader("上传图像")
+    st.markdown("<h2 class='card'>上传图像</h2>", unsafe_allow_html=True)
 
     # 上传图像文件
     uploaded_file = st.file_uploader(
@@ -610,8 +592,7 @@ with col1:
         uploaded_file = st.camera_input("拍摄玉米照片")
 
     if uploaded_file is not None:
-        # 显示原始图像
-        st.subheader("原始图像")
+        st.markdown("<h2 class='card'>原始图像</h2>", unsafe_allow_html=True)
         image = Image.open(uploaded_file)
         img_array = np.array(image)
 
@@ -645,14 +626,14 @@ with col1:
 
                         # 显示结果图像
                         with col2:
-                            st.subheader("分析结果")
+                            st.markdown("<h2 class='card'>分析结果</h2>", unsafe_allow_html=True)
                             st.image(
                                 cv2.cvtColor(result_img, cv2.COLOR_BGR2RGB),
                                 use_column_width=True
                             )
 
+                            st.markdown("<h2 class='card'>统计信息</h2>", unsafe_allow_html=True)
                             # 显示统计信息
-                            st.subheader("统计信息")
                             st.metric("坏粒数量", bad_count)
 
                             # 下载结果
