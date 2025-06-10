@@ -1,0 +1,7 @@
+streamlit==1.24.1
+torch>=1.13.0
+opencv-python-headless
+numpy
+ultralytics
+pyyaml
+Python ==3.8.13
