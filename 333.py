@@ -22,6 +22,7 @@ st.set_page_config(
 )
 
 # 自定义CSS样式
+# 自定义CSS样式 - 增强版本
 custom_css = """
 <style>
     /* 玉米主题颜色 */
@@ -31,11 +32,14 @@ custom_css = """
         --accent-color: #EF5350;     /* 坏粒标记红色 */
         --background-color: #FAFAFA; /* 背景色 */
         --card-color: #FFFFFF;       /* 卡片色 */
+        --text-color: #333333;       /* 文本颜色 */
+        --border-color: #EEEEEE;     /* 边框颜色 */
     }
     
     /* 整体样式 */
     body {
         background-color: var(--background-color);
+        color: var(--text-color);
     }
     
     /* 标题样式 */
@@ -45,10 +49,57 @@ custom_css = """
         margin-bottom: 0.5rem;
     }
     
+    /* 顶部导航栏 */
+    .navbar {
+        background-color: var(--primary-color);
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .logo-container {
+        display: flex;
+        align-items: center;
+    }
+    
+    .logo-img {
+        height: 60px;
+        margin-right: 1rem;
+    }
+    
+    .logo-text {
+        font-size: 1.75rem;
+        font-weight: bold;
+        color: var(--secondary-color);
+    }
+    
+    .nav-links {
+        display: flex;
+        gap: 1rem;
+    }
+    
+    .nav-link {
+        color: var(--secondary-color);
+        text-decoration: none;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        transition: background-color 0.3s ease;
+    }
+    
+    .nav-link:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+    
     /* 侧边栏样式 */
     .sidebar .sidebar-content {
-        background-color: var(--primary-color);
+        background-color: var(--card-color);
         color: var(--secondary-color);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     }
     
     /* 按钮样式 */
@@ -58,11 +109,14 @@ custom_css = """
         border-radius: 8px;
         font-weight: bold;
         transition: all 0.3s ease;
+        padding: 0.75rem 1.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
     
     .stButton > button:hover {
         background-color: #FFA726;
         transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
     
     /* 滑块样式 */
@@ -81,6 +135,11 @@ custom_css = """
         padding: 1.5rem;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         margin-bottom: 1.5rem;
+        transition: transform 0.3s ease;
+    }
+    
+    .card:hover {
+        transform: translateY(-5px);
     }
     
     /* 状态提示样式 */
@@ -112,10 +171,15 @@ custom_css = """
     .stat-card {
         background-color: var(--card-color);
         border-radius: 12px;
-        padding: 1rem;
+        padding: 1.5rem;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         text-align: center;
         margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
     
     .stat-title {
@@ -125,18 +189,90 @@ custom_css = """
     }
     
     .stat-value {
-        font-size: 1.5rem;
+        font-size: 1.75rem;
         font-weight: bold;
         color: var(--primary-color);
+    }
+    
+    /* 文件上传区域样式 */
+    .upload-area {
+        border: 2px dashed var(--primary-color);
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .upload-area:hover {
+        background-color: rgba(255, 183, 77, 0.05);
+        border-color: #FFA726;
+    }
+    
+    /* 图像显示区域样式 */
+    .image-container {
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 </style>
 """
 
+# 模拟logo图像数据
+def get_logo_svg():
+    return """
+    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <!-- 玉米外壳 -->
+        <path d="M100,30 Q150,30 150,80 Q150,130 100,130 Q50,130 50,80 Q50,30 100,30" fill="#FFB74D" />
+        <!-- 玉米颗粒 -->
+        <ellipse cx="100" cy="60" rx="10" ry="15" fill="#FFFF00" />
+        <ellipse cx="85" cy="55" rx="10" ry="15" fill="#FFFF00" />
+        <ellipse cx="115" cy="55" rx="10" ry="15" fill="#FFFF00" />
+        <ellipse cx="70" cy="50" rx="10" ry="15" fill="#FFFF00" />
+        <ellipse cx="130" cy="50" rx="10" ry="15" fill="#FFFF00" />
+        <ellipse cx="85" cy="70" rx="10" ry="15" fill="#FFFF00" />
+        <ellipse cx="115" cy="70" rx="10" ry="15" fill="#FFFF00" />
+        <ellipse cx="100" cy="85" rx="10" ry="15" fill="#FFFF00" />
+        <!-- 玉米叶 -->
+        <path d="M100,30 Q120,10 140,30 Q160,50 140,70 Q120,90 100,70 Q80,90 60,70 Q40,50 60,30 Q80,10 100,30" fill="#4CAF50" />
+    </svg>
+    """
+
+# 设置页面配置
+st.set_page_config(
+    page_title="玉米坏粒识别平台",
+    page_icon="🌽",
+    layout="wide"
+)
+
+# 显示自定义CSS
 st.markdown(custom_css, unsafe_allow_html=True)
 
-# 标题和介绍
-st.title("🌽 玉米坏粒识别平台")
-st.markdown("本平台基于深度学习技术，能够自动识别玉米中的坏粒，帮助您快速评估玉米质量。")
+# 顶部导航栏
+st.markdown("""
+<div class="navbar">
+    <div class="logo-container">
+        <div class="logo-img">
+            """ + get_logo_svg() + """
+        </div>
+        <div class="logo-text">玉米坏粒识别平台</div>
+    </div>
+    <div class="nav-links">
+        <a href="#" class="nav-link">主页</a>
+        <a href="#" class="nav-link">使用说明</a>
+        <a href="#" class="nav-link">关于我们</a>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# 主介绍区域
+st.markdown("""
+<div class="card">
+    <h2 class="main-header">智能玉米质量检测解决方案</h2>
+    <p>本平台基于深度学习技术，能够自动识别玉米中的坏粒，帮助您快速评估玉米质量。
+    上传玉米图像后，系统将自动检测并标记出坏粒区域，提供坏粒数量统计和质量评估。</p>
+</div>
+""", unsafe_allow_html=True)
 
 # 侧边栏 - 模型设置
 with st.sidebar:
