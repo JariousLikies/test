@@ -17,118 +17,168 @@ logger = setup_logging()
 st.set_page_config(
     page_title="玉米坏粒识别平台",
     page_icon="🌽",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
-# 优化后的应用样式
+# 应用样式
 def apply_custom_styles():
+    """应用自定义CSS样式"""
     st.markdown("""
     <style>
-        /* 整体布局 */
-        .main {max-width: 1200px; margin: 0 auto;}
-        .container {display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;}
+        /* 整体页面样式 */
+        .main-header {
+            color: #2c3e50;
+            font-family: 'Segoe UI', sans-serif;
+        }
         
-        /* 卡片样式升级 */
+        /* 侧边栏样式 */
+        .sidebar .sidebar-content {
+            background-color: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* 卡片样式 */
         .card {
             background-color: white;
-            border-radius: 12px;
-            padding: 2rem;
-            box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
             transition: transform 0.2s ease;
         }
-        .card:hover {transform: translateY(-5px); box-shadow: 0 8px 18px rgba(0,0,0,0.12);}
         
-        /* 图像容器优化 */
-        .image-container {
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+        }
+        
+        /* 按钮样式 */
+        .stButton>button {
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .stButton>button:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(76, 175, 80, 0.25);
+        }
+        
+        /* 统计卡片样式 */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
             margin-bottom: 1.5rem;
         }
         
-        /* 结果统计卡片 */
-        .stats-card {
-            display: flex;
-            justify-content: space-around;
-            gap: 1.5rem;
-            margin-top: 2rem;
-        }
-        .stat-item {
+        .stat-card {
+            background-color: #f0f2f6;
+            border-radius: 0.5rem;
+            padding: 1rem;
             text-align: center;
-            padding: 1.2rem;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            flex: 1;
         }
+        
         .stat-value {
-            font-size: 2.2rem;
-            font-weight: 600;
+            font-size: 1.75rem;
+            font-weight: bold;
             color: #2c3e50;
         }
         
-        /* 按钮样式增强 */
-        .stButton>button {
-            background-color: #2ecc71;
-            padding: 0.8rem 2rem;
-            font-size: 1.1rem;
-            border-radius: 20px;
-            box-shadow: 0 2px 4px rgba(46, 204, 113, 0.2);
-        }
-        .stButton>button:hover {
-            background-color: #27ae60;
-            box-shadow: 0 4px 8px rgba(46, 204, 113, 0.3);
-            transform: translateY(-1px);
+        .stat-label {
+            font-size: 0.9rem;
+            color: #7f8c8d;
         }
         
-        /* 深色模式适配 */
-        .dark-mode .card {background-color: #2d2d2d;}
-        .dark-mode .image-container {box-shadow: 0 4px 8px rgba(0,0,0,0.2);}
-        .dark-mode .stats-card .stat-item {background-color: #3d3d3d; color: white;}
+        /* 深色模式样式 */
+        .dark-mode {
+            background-color: #1e1e1e;
+            color: white;
+        }
+        
+        .dark-mode .card {
+            background-color: #2d2d2d;
+            color: white;
+        }
+        
+        .dark-mode .stat-card {
+            background-color: #3d3d3d;
+            color: white;
+        }
+        
+        /* 图像容器样式 */
+        .image-container {
+            border-radius: 0.75rem;
+            overflow: hidden;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* 分隔线样式 */
+        .divider {
+            border-top: 1px solid #e0e0e0;
+            margin: 1.5rem 0;
+        }
+        
+        /* 下载按钮样式 */
+        .download-btn {
+            text-align: center;
+            margin-top: 1.5rem;
+        }
     </style>
-    """)
+    """, unsafe_allow_html=True)
 
+# 应用自定义样式
 apply_custom_styles()
 
-# 标题区域
-st.markdown(
-    "<div style='text-align: center; margin-bottom: 2rem;'>"
-    "<h1 class='main-header'>🌽 玉米坏粒识别平台</h1>"
-    "<p>基于深度学习的玉米质量智能评估系统</p>"
-    "</div>"
-)
+# 标题和介绍
+st.markdown("<h1 class='main-header'>🌽 玉米坏粒识别平台</h1>", unsafe_allow_html=True)
+st.markdown("本平台基于深度学习技术，能够自动识别玉米中的坏粒，帮助您快速评估玉米质量。")
 
-# 侧边栏保留原有功能，优化排版
+# 主题选择器
 with st.sidebar:
-    st.header("系统设置")
+    st.header("界面设置")
+    theme = st.selectbox(
+        "选择主题",
+        ["亮色模式", "深色模式"],
+        index=0
+    )
     
-    # 主题切换
-    theme = st.radio("选择主题", ["亮色模式", "深色模式"], horizontal=True)
+    # 应用主题
     if theme == "深色模式":
         st.markdown("<body class='dark-mode'>", unsafe_allow_html=True)
     
-    # 模型设置
-    st.header("模型管理")
-    
+    # 侧边栏 - 模型设置
+    st.header("模型设置")
+
     # 默认模型路径
     DEFAULT_MODEL_PATH = 'model/best.pt'
+
+    # 检查默认模型是否存在
     default_model_exists = os.path.exists(DEFAULT_MODEL_PATH)
-    
+
     if default_model_exists:
         st.info(f"检测到默认模型: {DEFAULT_MODEL_PATH}")
     else:
         st.warning(f"未找到默认模型: {DEFAULT_MODEL_PATH}")
-    
+
     # 模型选择方式
     model_choice = st.radio(
         "选择模型来源",
         ["默认模型", "上传自定义模型"]
     )
-    
+
     # 根据选择设置模型文件和类型
     model_file = None
     model_type = None
-    
+
     if model_choice == "默认模型" and default_model_exists:
         try:
             model_file = open(DEFAULT_MODEL_PATH, 'rb')
@@ -144,14 +194,14 @@ with st.sidebar:
     elif model_choice == "上传自定义模型":
         # 上传模型权重文件
         model_file = st.file_uploader("上传模型文件", type=["pt", "pth", "onnx"])
-        
+
         if model_file:
             file_ext = os.path.splitext(model_file.name)[1].lower()
             if file_ext == '.onnx':
                 default_model_type = "ONNX"
             else:
                 default_model_type = "PyTorch"
-            
+
             model_type = st.selectbox(
                 "模型类型",
                 ["PyTorch", "TorchScript", "ONNX"],
@@ -162,7 +212,7 @@ with st.sidebar:
             st.info("请上传模型文件")
     else:
         st.info("请选择模型来源")
-    
+
     # 只有在选择了模型后才显示其他设置
     if model_file and model_type:
         confidence_threshold = st.slider(
@@ -172,7 +222,7 @@ with st.sidebar:
             value=0.5,
             step=0.05
         )
-        
+
         # 高级设置
         with st.expander("高级设置"):
             draw_bbox = st.checkbox("显示边界框", value=True)
@@ -180,85 +230,123 @@ with st.sidebar:
             draw_confidence = st.checkbox("显示置信度", value=True)
             line_thickness = st.slider("边界框线条粗细", min_value=1, max_value=10, value=2)
             detection_color = st.color_picker("坏粒标记颜色", "#FF0000")
-    
-    # 关于信息（使用 markdown 替代 info）
+
     st.header("关于")
-    st.markdown("""
-    本平台支持：  
-    ✅ 多格式图像上传  
-    ✅ 自定义模型加载  
-    ✅ 实时摄像头拍摄  
+    st.info("""
+    本平台使用深度学习模型识别玉米坏粒，支持多种格式的图像输入。
+    上传图像后，系统将自动检测并标记出坏粒区域。
     """)
 
-# 主内容区域采用容器布局
-with st.container():
-    col1, col2 = st.columns([1, 1], gap='large')
-    
-    with col1:
-        st.subheader("图像输入")
-        # 上传组件
-        uploaded_file = st.file_uploader(
-            "选择图片", type=["jpg", "jpeg", "png"],
-            label_visibility="collapsed",
-            help="支持JPG/PNG格式，或点击下方摄像头拍摄"
-        )
-        # 摄像头选项
-        if st.checkbox("使用摄像头拍摄", key="camera_check"):
-            uploaded_file = st.camera_input("拍摄玉米照片", key="camera_input")
-        
-        # 原始图像展示
-        if uploaded_file:
-            with st.container():
-                st.markdown("<div class='card'>", unsafe_allow_html=True)
-                st.markdown("<h3 style='text-align: center;'>原始图像</h3>", unsafe_allow_html=True)
-                image = Image.open(uploaded_file)
-                st.markdown("<div class='image-container'>", unsafe_allow_html=True)
-                st.image(image, use_column_width=True)
-                st.markdown("</div>", unsafe_allow_html=True)
-                st.markdown("</div>", unsafe_allow_html=True)
+# 主界面 - 优化布局结构
+col1, col2 = st.columns([1, 1], gap="large")
 
-    with col2:
-        st.subheader("分析结果")
-        result_placeholder = st.empty()
+with col1:
+    st.subheader("图像输入")
+    
+    # 创建卡片式布局
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    
+    # 上传图像文件
+    uploaded_file = st.file_uploader(
+        "选择一张图片",
+        type=["jpg", "jpeg", "png", "bmp"],
+        label_visibility="collapsed"
+    )
+    
+    # 或者从摄像头捕获
+    use_camera = st.checkbox("使用摄像头拍摄")
+    if use_camera:
+        uploaded_file = st.camera_input("拍摄玉米照片", label_visibility="collapsed")
+    
+    st.markdown("</div>", unsafe_allow_html=True)
+    
+    if uploaded_file is not None:
+        # 创建卡片式布局
+        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.subheader("原始图像")
         
-        # 模型执行逻辑
-        if uploaded_file and model_file and model_type:
-            if st.button("开始分析", key="analyze_btn", help="点击进行坏粒检测"):
-                # 模型加载与推理
-                if not model: model = load_model(model_file, model_type)
+        # 显示原始图像
+        image = Image.open(uploaded_file)
+        img_array = np.array(image)
+
+        # 如果图像是RGBA格式，转换为RGB
+        if img_array.shape[2] == 4:
+            img_array = cv2.cvtColor(img_array, cv2.COLOR_RGBA2RGB)
+        else:
+            img_array = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+
+        st.markdown("<div class='image-container'>", unsafe_allow_html=True)
+        st.image(image, use_column_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+with col2:
+    st.subheader("分析结果")
+    
+    # 结果区域占位符
+    result_placeholder = st.empty()
+    
+    # 只有在选择了模型和上传了图像后才显示分析按钮
+    if uploaded_file is not None and model_file and model_type:
+        # 加载模型
+        if 'model' not in st.session_state:
+            with st.spinner("加载模型中..."):
+                st.session_state.model = load_model(model_file, model_type)
+                model = st.session_state.model
+                
+                # 模型测试推理（仅在上传模型后执行）
                 if model and test_model_inference(model, model_type):
-                    with st.spinner("正在进行坏粒检测..."):
-                        start_time = time.time()
-                        result_img, bad_count = process_image(
-                            np.array(Image.open(uploaded_file)), 
-                            model, model_type, 
-                            confidence_threshold, detection_color,
-                            draw_bbox, draw_label, draw_confidence, line_thickness
-                        )
-                        processing_time = time.time() - start_time
+                    st.success("模型测试推理成功，准备就绪！")
+                elif model:
+                    st.warning("模型测试推理返回意外结果，但继续运行。")
+        else:
+            model = st.session_state.model
+
+        if st.button("开始分析", type="primary"):
+            if model is None:
+                st.error("模型加载失败，请检查模型文件。")
+            else:
+                with st.spinner("正在分析图像..."):
+                    start_time = time.time()
+                    result_img, bad_count = process_image(
+                        img_array, model, model_type, confidence_threshold, detection_color,
+                        draw_bbox, draw_label, draw_confidence, line_thickness
+                    )
+                    end_time = time.time()
+
+                    # 显示处理时间
+                    processing_time = end_time - start_time
+                    
+                    # 在结果占位符中显示内容
+                    with result_placeholder.container():
+                        # 创建卡片式布局
+                        st.markdown("<div class='card'>", unsafe_allow_html=True)
                         
-                        # 结果展示
-                        result_placeholder.markdown("<div class='card'>", unsafe_allow_html=True)
-                        st.markdown("<h3 style='text-align: center;'>检测结果</h3>", unsafe_allow_html=True)
+                        # 显示结果图像
+                        st.subheader("分析结果")
                         st.markdown("<div class='image-container'>", unsafe_allow_html=True)
-                        st.image(result_img, channels="BGR", use_column_width=True)
+                        st.image(
+                            cv2.cvtColor(result_img, cv2.COLOR_BGR2RGB),
+                            use_column_width=True
+                        )
                         st.markdown("</div>", unsafe_allow_html=True)
                         
-                        # 统计信息
+                        # 显示统计信息
+                        st.subheader("统计信息")
                         st.markdown("""
-                        <div class="stats-card">
-                            <div class="stat-item">
+                        <div class="stats-container">
+                            <div class="stat-card">
                                 <div class="stat-value">%d</div>
-                                <div style="color: #7f8c8d;">坏粒数量</div>
+                                <div class="stat-label">坏粒数量</div>
                             </div>
-                            <div class="stat-item">
-                                <div class="stat-value">%.2f秒</div>
-                                <div style="color: #7f8c8d;">处理耗时</div>
+                            <div class="stat-card">
+                                <div class="stat-value">%.2fs</div>
+                                <div class="stat-label">处理时间</div>
                             </div>
                         </div>
-                        """ % (bad_count, processing_time))
+                        """ % (bad_count, processing_time), unsafe_allow_html=True)
                         
-                        # 下载按钮
+                        # 下载结果
                         st.markdown("""
                         <style>
                         .download-btn {
@@ -266,24 +354,26 @@ with st.container():
                             margin-top: 1.5rem;
                         }
                         </style>
-                        """)
+                        """, unsafe_allow_html=True)
+                        
                         st.markdown('<div class="download-btn">', unsafe_allow_html=True)
                         result_pil = Image.fromarray(cv2.cvtColor(result_img, cv2.COLOR_BGR2RGB))
-                        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+                        with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp:
                             result_pil.save(tmp.name)
                             st.download_button(
-                                "下载标注图像",
+                                label="下载分析结果",
                                 data=open(tmp.name, 'rb').read(),
-                                file_name=f"corn_analysis_{time.strftime('%Y%m%d_%H%M%S')}.png",
+                                file_name="corn_analysis_result.png",
                                 mime="image/png",
                                 use_container_width=True
                             )
                         st.markdown('</div>', unsafe_allow_html=True)
-                        result_placeholder.markdown("</div>", unsafe_allow_html=True)
+                        
+                        st.markdown("</div>", unsafe_allow_html=True)
 
-# 底部提示
-st.markdown(
-    "<div style='text-align: center; margin: 2rem 0; color: #7f8c8d;'>"
-    "提示：检测结果仅供参考，实际应用请结合专业质检流程"
-    "</div>"
-)
+# 底部信息
+st.markdown("""
+<div style="text-align: center; color: #7f8c8d; margin-top: 2rem;">
+    <p>© 2025 玉米坏粒识别平台 | 检测结果仅供参考，实际应用请结合专业质检流程</p>
+</div>
+""", unsafe_allow_html=True)
