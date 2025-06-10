@@ -1,130 +1,62 @@
 import streamlit as st
+import os
+import tempfile
 import torch
-import torch.nn.functional as F
 import cv2
 import numpy as np
 from PIL import Image
-import tempfile
 import time
-import os
 import logging
 import onnxruntime as ort
+from ultralytics import YOLO
 
 # 配置日志
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+ch = logging.StreamHandler()
+ch.setFormatter(formatter)
+logger.addHandler(ch)
 
-# 设置页面配置
-st.set_page_config(
-    page_title="玉米坏粒识别平台",
-    page_icon="🌽",
-    layout="wide"
-)
-
-# 标题和介绍
-st.title("🌽 玉米坏粒识别平台")
-st.markdown("本平台基于深度学习技术，能够自动识别玉米中的坏粒，帮助您快速评估玉米质量。")
-
-# 默认权重文件路径，这里需要替换为你实际的默认权重文件路径
-DEFAULT_MODEL_PATH = "default_model.onnx"
-
-# 侧边栏 - 模型设置
-with st.sidebar:
-    st.header("模型设置")
-
-    # 上传模型权重文件
-    model_file = st.file_uploader("上传模型文件", type=["pt", "pth", "onnx"])
-
-    # 选择模型类型
-    if model_file:
-        file_ext = os.path.splitext(model_file.name)[1].lower()
-        if file_ext == '.onnx':
-            default_model_type = "ONNX"
-        else:
-            default_model_type = "PyTorch"
-
-        model_type = st.selectbox(
-            "模型类型",
-            ["PyTorch", "TorchScript", "ONNX"],
-            index=["PyTorch", "TorchScript", "ONNX"].index(default_model_type)
-        )
-    elif os.path.exists(DEFAULT_MODEL_PATH):
-        file_ext = os.path.splitext(DEFAULT_MODEL_PATH)[1].lower()
-        if file_ext == '.onnx':
-            default_model_type = "ONNX"
-        else:
-            default_model_type = "PyTorch"
-
-        model_type = st.selectbox(
-            "模型类型",
-            ["PyTorch", "TorchScript", "ONNX"],
-            index=["PyTorch", "TorchScript", "ONNX"].index(default_model_type)
-        )
-    else:
-        model_type = st.selectbox(
-            "模型类型",
-            ["PyTorch", "TorchScript", "ONNX"],
-            index=0
-        )
-
-    confidence_threshold = st.slider(
-        "置信度阈值",
-        min_value=0.0,
-        max_value=1.0,
-        value=0.5,
-        step=0.05
-    )
-
-    # 高级设置
-    with st.expander("高级设置"):
-        draw_bbox = st.checkbox("显示边界框", value=True)
-        draw_label = st.checkbox("显示标签", value=True)
-        draw_confidence = st.checkbox("显示置信度", value=True)
-        line_thickness = st.slider("边界框线条粗细", min_value=1, max_value=10, value=2)
-        detection_color = st.color_picker("坏粒标记颜色", "#FF0000")
-
-    st.header("关于")
-    st.info("""
-    本平台使用深度学习模型识别玉米坏粒，支持多种格式的图像输入。
-    上传图像后，系统将自动检测并标记出坏粒区域。
-    """)
+st.header("关于")
+st.info("""
+本平台使用深度学习模型识别玉米坏粒，支持多种格式的图像输入。
+上传图像后，系统将自动检测并标记出坏粒区域。
+""")
 
 try:
     from ultralytics import YOLO
-
     ULTRALYTICS_AVAILABLE = True
 except ImportError:
     ULTRALYTICS_AVAILABLE = False
     st.warning("未安装ultralytics库，可能无法加载某些类型的模型。")
 
 
+# 自动查找model目录下的权重文件
+def find_model_file():
+    model_dir = "model"
+    if os.path.exists(model_dir):
+        for root, dirs, files in os.walk(model_dir):
+            for file in files:
+                if file.endswith(('.pt', '.onnx')):
+                    return os.path.join(root, file)
+    return None
+
+
 # 加载模型
 @st.cache_resource
 def load_model(model_path, model_type):
     if not model_path:
-        if os.path.exists(DEFAULT_MODEL_PATH):
-            st.info(f"未上传模型，使用默认模型: {DEFAULT_MODEL_PATH}")
-            model_path = DEFAULT_MODEL_PATH
-            model_file = None
-        else:
-            st.warning("未上传模型，也未找到默认模型，使用示例参数。请上传您的模型文件以获得准确结果。")
-            return None
+        st.warning("未找到模型文件，使用示例参数。请确保model目录下有有效的模型文件。")
+        return None
 
     try:
-        if isinstance(model_path, str):  # 使用默认模型
-            tmp_path = model_path
-        else:  # 使用上传的模型
-            # 临时保存上传的模型文件
-            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(model_path.name)[1]) as tmp:
-                tmp.write(model_path.getvalue())
-                tmp_path = tmp.name
-
-        st.info(f"正在加载{model_type}模型: {tmp_path}")
+        st.info(f"正在加载{model_type}模型: {os.path.basename(model_path)}")
 
         if model_type == "ONNX":
             # 加载ONNX模型
             model = ort.InferenceSession(
-                tmp_path,
+                model_path,
                 providers=['CPUExecutionProvider']
             )
             st.success("ONNX模型加载成功！")
@@ -132,7 +64,7 @@ def load_model(model_path, model_type):
             # 尝试加载为Ultralytics YOLO模型
             if ULTRALYTICS_AVAILABLE:
                 try:
-                    model = YOLO(tmp_path)
+                    model = YOLO(model_path)
                     st.success("Ultralytics YOLO模型加载成功！")
                     # 特殊处理：调整为评估模式
                     if hasattr(model, 'model') and hasattr(model.model, 'eval'):
@@ -149,7 +81,7 @@ def load_model(model_path, model_type):
                             torch.serialization.add_safe_globals([DetectionModel])
 
                             # 使用weights_only=False加载完整模型
-                            model = torch.load(tmp_path, map_location=torch.device('cpu'), weights_only=False)
+                            model = torch.load(model_path, map_location=torch.device('cpu'), weights_only=False)
                             st.success("PyTorch模型加载成功（使用weights_only=False）！")
 
                             # 检查是否需要转换为eval模式
@@ -162,7 +94,7 @@ def load_model(model_path, model_type):
                         # 尝试常规PyTorch加载
                         try:
                             # 尝试常规加载
-                            model = torch.load(tmp_path, map_location=torch.device('cpu'))
+                            model = torch.load(model_path, map_location=torch.device('cpu'))
                             st.success("PyTorch模型加载成功！")
 
                             # 检查是否需要转换为eval模式
@@ -171,13 +103,13 @@ def load_model(model_path, model_type):
                         except Exception as e2:
                             # 尝试作为TorchScript加载
                             st.info("常规加载失败，尝试作为TorchScript加载...")
-                            model = torch.jit.load(tmp_path, map_location=torch.device('cpu'))
+                            model = torch.jit.load(model_path, map_location=torch.device('cpu'))
                             st.success("TorchScript模型加载成功！")
             else:
                 # 没有安装ultralytics库，直接尝试常规加载
                 try:
                     # 尝试常规加载
-                    model = torch.load(tmp_path, map_location=torch.device('cpu'))
+                    model = torch.load(model_path, map_location=torch.device('cpu'))
                     st.success("PyTorch模型加载成功！")
 
                     # 检查是否需要转换为eval模式
@@ -186,12 +118,8 @@ def load_model(model_path, model_type):
                 except Exception as e:
                     # 尝试作为TorchScript加载
                     st.info("常规加载失败，尝试作为TorchScript加载...")
-                    model = torch.jit.load(tmp_path, map_location=torch.device('cpu'))
+                    model = torch.jit.load(model_path, map_location=torch.device('cpu'))
                     st.success("TorchScript模型加载成功！")
-
-        # 清理临时文件
-        if not isinstance(model_path, str):
-            os.unlink(tmp_path)
 
         # 模型测试推理（仅在上传模型后执行）
         if test_model_inference(model, model_type):
@@ -536,6 +464,14 @@ def hex_to_rgb(hex_color):
 # 主界面
 col1, col2 = st.columns([1, 1])
 
+# 假设的参数
+draw_bbox = True
+draw_label = True
+draw_confidence = True
+line_thickness = 2
+confidence_threshold = 0.5
+detection_color = "#FF0000"
+
 with col1:
     st.subheader("上传图像")
 
@@ -564,12 +500,16 @@ with col1:
 
         st.image(image, use_column_width=True)
 
+        # 查找模型文件
+        model_file = find_model_file()
+        model_type = "ONNX" if model_file.endswith('.onnx') else "PyTorch"
+
         # 加载模型
         model = load_model(model_file, model_type)
 
         if st.button("开始分析"):
-            if model is None and not model_file and not os.path.exists(DEFAULT_MODEL_PATH):
-                st.warning("未加载模型，也未找到默认模型，将使用示例参数进行演示。")
+            if model is None and not model_file:
+                st.warning("未加载模型，将使用示例参数进行演示。")
 
             with st.spinner("正在分析图像..."):
                 start_time = time.time()
