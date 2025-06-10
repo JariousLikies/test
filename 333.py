@@ -29,11 +29,37 @@ st.markdown("本平台基于深度学习技术，能够自动识别玉米中的�
 with st.sidebar:
     st.header("模型设置")
 
-    # 添加自定义和默认按钮
-    custom_mode = st.button("自定义")
-    default_mode = st.button("默认")
+    # 自定义按钮样式
+    button_style = """
+    <style>
+    .stButton > button {
+        width: 100%;
+        margin-bottom: 10px;
+        font-size: 16px;
+        padding: 10px;
+    }
+    </style>
+    """
+    st.markdown(button_style, unsafe_allow_html=True)
 
-    if custom_mode:
+    # 两个按钮选项
+    default_model_choice = st.button("使用默认模型")
+    custom_model_choice = st.button("使用自定义模型")
+
+    if default_model_choice:
+        model_file = open('model/best.pt', 'rb')
+        file_ext = os.path.splitext(model_file.name)[1].lower()
+        if file_ext == '.onnx':
+            default_model_type = "ONNX"
+        else:
+            default_model_type = "PyTorch"
+
+        model_type = st.selectbox(
+            "模型类型",
+            ["PyTorch", "TorchScript", "ONNX"],
+            index=["PyTorch", "TorchScript", "ONNX"].index(default_model_type)
+        )
+    elif custom_model_choice:
         # 上传模型权重文件
         model_file = st.file_uploader("上传模型文件", type=["pt", "pth", "onnx"])
 
@@ -56,20 +82,6 @@ with st.sidebar:
                 ["PyTorch", "TorchScript", "ONNX"],
                 index=0
             )
-    elif default_mode:
-        # 默认使用model文件夹中的pt文件
-        default_model_path = os.path.join("model", [f for f in os.listdir("model") if f.endswith('.pt')][0])
-        class DummyFile:
-            def __init__(self, path):
-                self.name = path
-                with open(path, 'rb') as f:
-                    self.value = f.read()
-
-            def getvalue(self):
-                return self.value
-
-        model_file = DummyFile(default_model_path)
-        model_type = "PyTorch"
     else:
         model_file = None
         model_type = st.selectbox(
@@ -555,7 +567,54 @@ with col1:
     if uploaded_file is not None:
         # 显示原始图像
         st.subheader("原始图像")
+        image = Image.open(uploaded_file)
+        img_array = np.array(image)
 
+        # 如果图像是RGBA格式，转换为RGB
+        if img_array.shape[2] == 4:
+            img_array = cv2.cvtColor(img_array, cv2.COLOR_RGBA2RGB)
+        else:
+            img_array = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
 
-# 加载模型
-model = load_model(model_file, model_type)
+        st.image(image, use_column_width=True)
+
+        # 加载模型
+        model = load_model(model_file, model_type)
+
+        if st.button("开始分析"):
+            if model is None and not model_file:
+                st.warning("未加载模型，将使用示例参数进行演示。")
+
+            with st.spinner("正在分析图像..."):
+                start_time = time.time()
+                result_img, bad_count = process_image(
+                    img_array, model, model_type, confidence_threshold, detection_color
+                )
+                end_time = time.time()
+
+                # 显示处理时间
+                processing_time = end_time - start_time
+                st.write(f"分析完成！耗时: {processing_time:.2f}秒")
+
+                # 显示结果图像
+                with col2:
+                    st.subheader("分析结果")
+                    st.image(
+                        cv2.cvtColor(result_img, cv2.COLOR_BGR2RGB),
+                        use_column_width=True
+                    )
+
+                    # 显示统计信息
+                    st.subheader("统计信息")
+                    st.metric("坏粒数量", bad_count)
+
+                    # 下载结果
+                    result_pil = Image.fromarray(cv2.cvtColor(result_img, cv2.COLOR_BGR2RGB))
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp:
+                        result_pil.save(tmp.name)
+                        st.download_button(
+                            label="下载分析结果",
+                            data=open(tmp.name, 'rb').read(),
+                            file_name="corn_analysis_result.png",
+                            mime="image/png"
+                        )
