@@ -1,7 +1,6 @@
-streamlit==1.24.1
-torch>=1.13.0
-opencv-python-headless
-numpy
-ultralytics
-pyyaml
-Python ==3.8.13
+streamlit==1.26.0          # 最新版兼容 Python 3.10+
+torch==2.1.0               # 支持 Python 3.10+
+opencv-python-headless==4.8.1.78  # 明确版本，避免默认下载旧版（cp37）
+numpy==1.26.2
+ultralytics==8.0.158        # 最新版支持 Python 3.9+
+pyyaml==6.0.1 
