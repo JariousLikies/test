@@ -30,7 +30,7 @@ with st.sidebar:
     st.header("模型设置")
     
     # 默认模型路径
-    DEFAULT_MODEL_PATH = 'model/default_model.pt'
+    DEFAULT_MODEL_PATH = 'model/best.pt'
     
     # 检查默认模型是否存在
     default_model_exists = os.path.exists(DEFAULT_MODEL_PATH)
