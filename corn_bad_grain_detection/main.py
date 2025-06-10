@@ -21,11 +21,11 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 应用样式 - 优化侧边栏和整体布局
+# 应用样式 - 优化布局和图像显示
 def apply_custom_styles():
     st.markdown("""
     <style>
-        /* 侧边栏样式优化 */
+        /* 侧边栏样式 */
         .css-1lsmgbg {
             background-color: #f8fafc;
             border-right: 1px solid #e2e8f0;
@@ -59,11 +59,16 @@ def apply_custom_styles():
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
         }
         
-        /* 图像容器 */
+        /* 图像容器 - 优化布局 */
         .image-container {
             border-radius: 0.75rem;
             overflow: hidden;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f8fafc;
+            min-height: 200px;
         }
         
         /* 统计卡片 */
@@ -131,10 +136,21 @@ def apply_custom_styles():
             color: #e2e8f0;
         }
         
+        .dark-mode .image-container {
+            background-color: #2d3748;
+        }
+        
         /* 下载按钮 */
         .download-btn {
             text-align: center;
             margin-top: 1.5rem;
+        }
+        
+        /* 图片对齐辅助类 */
+        .img-wrapper {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -146,11 +162,11 @@ apply_custom_styles()
 st.markdown("<h1 style='text-align: center; margin-bottom: 1rem;'>🌽 玉米坏粒识别平台</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; color: #718096; margin-bottom: 2rem;'>基于深度学习技术的玉米质量智能评估系统</p>", unsafe_allow_html=True)
 
-# 侧边栏优化
+# 侧边栏
 with st.sidebar:
     st.markdown("### 🌐 系统设置")
     
-    # 主题切换 - 使用水平单选按钮
+    # 主题切换
     theme = st.radio(
         "选择主题",
         ["亮色模式", "深色模式"],
@@ -245,7 +261,7 @@ with st.sidebar:
     - 实时摄像头拍摄
     """)
 
-# 主内容区 - 优化布局
+# 主内容区 - 优化图像布局
 with st.container():
     # 输入区域和结果区域分栏展示
     col1, col2 = st.columns([1, 1], gap="large")
@@ -280,7 +296,7 @@ with st.container():
                 img_array = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
             
             st.markdown("<div class='image-container'>", unsafe_allow_html=True)
-            st.image(image, use_column_width=True)
+            st.image(image, use_column_width=True, output_format="PNG")
             st.markdown("</div>", unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
     
@@ -332,10 +348,11 @@ with st.container():
                                 
                                 st.subheader("分析结果")
                                 st.markdown("<div class='image-container'>", unsafe_allow_html=True)
-                                st.image(
-                                    cv2.cvtColor(result_img, cv2.COLOR_BGR2RGB),
-                                    use_column_width=True
-                                )
+                                
+                                # 将OpenCV格式的结果图像转换为PIL格式并显示
+                                result_pil = Image.fromarray(cv2.cvtColor(result_img, cv2.COLOR_BGR2RGB))
+                                st.image(result_pil, use_column_width=True, output_format="PNG")
+                                
                                 st.markdown("</div>", unsafe_allow_html=True)
                                 
                                 # 显示统计信息
@@ -355,7 +372,6 @@ with st.container():
                                 
                                 # 下载结果
                                 st.markdown('<div class="download-btn">', unsafe_allow_html=True)
-                                result_pil = Image.fromarray(cv2.cvtColor(result_img, cv2.COLOR_BGR2RGB))
                                 with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp:
                                     result_pil.save(tmp.name)
                                     st.download_button(
